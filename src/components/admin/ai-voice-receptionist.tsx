@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Vapi from "@vapi-ai/web";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ export default function AIVoiceReceptionist() {
   const [selectedLog, setSelectedLog] = useState<CallLog | null>(null);
   const [testCallStatus, setTestCallStatus] = useState<"idle" | "connecting" | "active">("idle");
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const vapiRef = useRef<Vapi | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioProgress, setAudioProgress] = useState(0);
@@ -100,14 +102,47 @@ export default function AIVoiceReceptionist() {
     }
   };
 
-  const toggleTestCall = () => {
+  const toggleTestCall = useCallback(async () => {
+    const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
+    // Use env var first, fall back to the assistantId state (which the user saved in settings)
+    const vapiAssistantId = process.env.NEXT_PUBLIC_VAPI_ASSISTANT_ID || assistantId;
+
     if (testCallStatus === "idle") {
+      if (!publicKey) {
+        alert("NEXT_PUBLIC_VAPI_PUBLIC_KEY is not set in .env. Add your Vapi public key to enable test calls.");
+        return;
+      }
+      if (!vapiAssistantId) {
+        alert("No Assistant ID configured. Save your settings first.");
+        return;
+      }
       setTestCallStatus("connecting");
-      setTimeout(() => setTestCallStatus("active"), 1500);
+      try {
+        const vapi = new Vapi(publicKey);
+        vapiRef.current = vapi;
+
+        vapi.on("call-start", () => setTestCallStatus("active"));
+        vapi.on("call-end", () => {
+          setTestCallStatus("idle");
+          vapiRef.current = null;
+        });
+        vapi.on("error", (e: Error) => {
+          console.error("Vapi error:", e);
+          setTestCallStatus("idle");
+          vapiRef.current = null;
+        });
+
+        await vapi.start(vapiAssistantId);
+      } catch (err) {
+        console.error("Failed to start Vapi call:", err);
+        setTestCallStatus("idle");
+      }
     } else {
+      vapiRef.current?.stop();
+      vapiRef.current = null;
       setTestCallStatus("idle");
     }
-  };
+  }, [testCallStatus, assistantId]);
 
   // Reset audio state when selected log changes
   useEffect(() => {
