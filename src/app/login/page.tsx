@@ -67,7 +67,7 @@ export default function LoginPage() {
           ? { email, password }
           : { name, email, password, role };
 
-      const res  = await fetch(`http://localhost:3099${endpoint}`, {
+      const res  = await fetch(endpoint, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(body),
@@ -88,7 +88,7 @@ export default function LoginPage() {
         router.replace("/appointments");
       }
     } catch {
-      setError("Cannot reach the server. Make sure the test server is running on port 3099.");
+      setError("Cannot reach the server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -301,8 +301,8 @@ export default function LoginPage() {
             {/* Demo hint */}
             {mode === "login" && (
               <p className={`text-center text-[11px] ${muted} pt-1`}>
-                Demo: <button type="button" onClick={() => { setEmail("admin@hospital.com"); setPassword("admin123"); }}
-                  className="text-blue-500 hover:underline font-medium">admin@hospital.com</button> / admin123
+                Demo: <button type="button" onClick={() => { setEmail("admin@settlementsense.com"); setPassword("admin123"); }}
+                  className="text-blue-500 hover:underline font-medium">admin@settlementsense.com</button> / admin123
               </p>
             )}
           </form>
